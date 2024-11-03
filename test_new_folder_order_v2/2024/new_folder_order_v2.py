@@ -104,6 +104,15 @@ def create_order_folder(folder_name):
         else:
             print(f"{YELLOW}Внимание: Файл шаблона ТЗ не найден по пути: {template_path}{RESET}")
 
+        # Копируем шаблон КП
+        template_path = current_dir / 'КП.xls'
+        if template_path.exists():
+            destination_path = order_dir / 'КП' / f'{folder_name}_КП_в1р1.xls'
+            shutil.copy(template_path, destination_path)
+            print(f"{GREEN}Шаблон КП скопирован для заказа {folder_name}{RESET}")
+        else:
+            print(f"{YELLOW}Внимание: Файл шаблона КП не найден по пути: {template_path}{RESET}")
+
         return True
 
     except Exception as e:
