@@ -24,7 +24,7 @@ port = config['port']
 
 def get_order_numbers_in_folder():
     # Получаем текущую директорию, где находится скрипт
-    current_dir = Path(__file__).parent
+    current_dir = Path(__file__).parent.parent  # Переход на уровень выше
 
     # Создаем множество для хранения номеров заказов
     order_numbers = set()
@@ -59,10 +59,11 @@ def create_maria_db_order_set():  # создаём множество заказ
         for (table_name,) in tables:
             print(table_name)
         cursor_mysql.execute("Select serial FROM task")
-        clients = cursor_mysql.fetchall()
+        all_orders = cursor_mysql.fetchall()
         order_set = set()
-        for client in clients:
-            order_set.add(client[0])
+        for order in all_orders:
+            if order[0][7:11] == "2024":
+                order_set.add(order[0])
         return order_set
 
     except mysql.connector.Error as err:
@@ -82,11 +83,12 @@ def create_maria_db_order_set():  # создаём множество заказ
 def create_order_folder(folder_name):
     """Создает папку для заказа и необходимые подпапки"""
     try:
-        # Получаем текущую директорию
-        current_dir = Path(__file__).parent
+        # Получаем директорию на уровень выше
+        project_dir = Path(__file__).parent
+        parent_dir = project_dir.parent
 
         # Создаем основную папку заказа
-        order_dir = current_dir / folder_name
+        order_dir = parent_dir / folder_name
         order_dir.mkdir(exist_ok=True)
 
         # Создаем стандартные подпапки (можете изменить список под ваши нужды)
@@ -96,7 +98,7 @@ def create_order_folder(folder_name):
             subfolder_path.mkdir(exist_ok=True)
 
         # Копируем шаблон ТЗ
-        template_path = current_dir / 'ТЗ.odt'
+        template_path = project_dir / 'ТЗ.odt'
         if template_path.exists():
             destination_path = order_dir / 'ТЗ' / f'{folder_name}_ТЗ_в1р1.odt'
             shutil.copy(template_path, destination_path)
@@ -105,7 +107,7 @@ def create_order_folder(folder_name):
             print(f"{YELLOW}Внимание: Файл шаблона ТЗ не найден по пути: {template_path}{RESET}")
 
         # Копируем шаблон КП
-        template_path = current_dir / 'КП.xls'
+        template_path = project_dir / 'КП.xls'
         if template_path.exists():
             destination_path = order_dir / 'КП' / f'{folder_name}_КП_в1р1.xls'
             shutil.copy(template_path, destination_path)
