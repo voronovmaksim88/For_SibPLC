@@ -1,16 +1,17 @@
 from pathlib import Path
 from db_config import load_config
 import mysql.connector
-
-# Модуль shutil - это модуль стандартной библиотеки Python,
-# который предоставляет набор функций для манипулирования файлами и директориями.
 import shutil
+from colorama import init, Fore, Style
 
-# Цветовые коды ANSI
-GREEN = '\033[92m'  # Зеленый цвет
-RED = '\033[91m'  # Красный цвет
-RESET = '\033[0m'  # Сброс цвета
-YELLOW = '\033[93m'  # Желтый цвет
+# Инициализация colorama для работы с цветами в разных терминалах
+init()
+
+# Определяем цвета используя colorama
+GREEN = Fore.GREEN
+RED = Fore.RED
+YELLOW = Fore.YELLOW
+RESET = Style.RESET_ALL
 
 # Загружаем конфигурацию
 config = load_config()
@@ -69,16 +70,12 @@ def get_order_numbers_in_folder():
 
 
 def create_maria_db_order_set():  # создаём множество заказов из MariaDB
-    # Устанавливаем соединение с БД MySQL
     connection_mysql = None
     cursor_mysql = None
     try:
         connection_mysql = mysql.connector.connect(**config)
-        # Создаем объект cursor, который позволяет нам выполнять SQL-запросы
         cursor_mysql = connection_mysql.cursor()
-        # Выполняем SQL-запрос для получения названий всех таблиц
         cursor_mysql.execute("SHOW TABLES")
-        # Получаем результаты и выводим их
         print("Названия всех таблиц в базе данных:")
         tables = cursor_mysql.fetchall()
         for (table_name,) in tables:
@@ -93,14 +90,12 @@ def create_maria_db_order_set():  # создаём множество заказ
         return order_set
 
     except mysql.connector.Error as err:
-        print(f"Ошибка: {err}")
+        print(f"{RED}Ошибка: {err}{RESET}")
         return None
 
     finally:
-        # Проверяем, был ли курсор инициализирован
         if cursor_mysql is not None:
             cursor_mysql.close()
-        # Проверяем, было ли соединение установлено и открыто
         if connection_mysql is not None and connection_mysql.is_connected():
             connection_mysql.close()
             print("Соединение с базой данных MariaDB закрыто")
@@ -117,8 +112,9 @@ def create_order_folder(folder_name):
         order_dir = parent_dir / folder_name
         order_dir.mkdir(exist_ok=True)
 
-        # Создаем стандартные подпапки (можете изменить список под ваши нужды)
-        subfolders = ['Чеклисты', 'Фото и видео', 'ТЗ', 'Счета входящие', 'Схема', 'ПО', 'Паспорт', 'КП', 'Документы']
+        # Создаем стандартные подпапки
+        subfolders = ['Чеклисты', 'Фото и видео', 'ТЗ', 'Счета входящие', 'Схема',
+                      'ПО', 'Паспорт', 'КП', 'Документы']
         for subfolder in subfolders:
             subfolder_path = order_dir / subfolder
             subfolder_path.mkdir(exist_ok=True)
@@ -148,13 +144,13 @@ def create_order_folder(folder_name):
         return False
 
 
-# Пример использования
 if __name__ == "__main__":
     order_numbers_in_folder = get_order_numbers_in_folder()
     if order_numbers_in_folder:
         print(f"Найдены следующие номера заказов в папках: {sorted(order_numbers_in_folder)}")
     else:
         print(f"{RED}В текущей директории не найдены папки с номерами заказов.{RESET}")
+
     maria_db_order_set = create_maria_db_order_set()
     print('')
     print("множество заказов в maria_db:")
@@ -168,6 +164,7 @@ if __name__ == "__main__":
     if not new_folder_names:
         print(f"{GREEN}Все необходимые папки уже существуют.{RESET}")
         exit(0)
+
     print('')
     print("новые папки будут созданы с именами:")
     print(new_folder_names)
@@ -189,4 +186,3 @@ if __name__ == "__main__":
     print(f"Успешно создано: {GREEN}{created_count}{RESET}")
     if failed_count > 0:
         print(f"Не удалось создать: {RED}{failed_count}{RESET}")
-    # print(get_current_year_from_parent_folder())
