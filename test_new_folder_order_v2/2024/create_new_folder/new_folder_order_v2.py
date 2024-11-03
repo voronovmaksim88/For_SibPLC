@@ -22,6 +22,31 @@ database = config['database']
 port = config['port']
 
 
+def get_current_year_from_parent_folder():
+    """Получает год из имени родительской папки"""
+    try:
+        # Получаем путь к родительской папке (на уровень выше скрипта)
+        parent_dir = Path(__file__).parent.parent
+
+        # Получаем имя папки
+        folder_name = parent_dir.name
+
+        # Ищем в имени папки 4 цифры подряд (год)
+        for i in range(len(folder_name) - 3):
+            possible_year = folder_name[i:i + 4]
+            if possible_year.isdigit() and 2000 <= int(possible_year) <= 2100:  # Разумный диапазон лет
+                return possible_year
+
+        # Если год не найден, возвращаем текущий год
+        from datetime import datetime
+        return str(datetime.now().year)
+
+    except Exception as e:
+        print(f"{RED}Ошибка при определении года: {e}{RESET}")
+        from datetime import datetime
+        return str(datetime.now().year)
+
+
 def get_order_numbers_in_folder():
     # Получаем текущую директорию, где находится скрипт
     current_dir = Path(__file__).parent.parent  # Переход на уровень выше
@@ -61,8 +86,9 @@ def create_maria_db_order_set():  # создаём множество заказ
         cursor_mysql.execute("Select serial FROM task")
         all_orders = cursor_mysql.fetchall()
         order_set = set()
+        year = get_current_year_from_parent_folder()
         for order in all_orders:
-            if order[0][7:11] == "2024":
+            if order[0][7:11] == year:
                 order_set.add(order[0])
         return order_set
 
@@ -163,3 +189,4 @@ if __name__ == "__main__":
     print(f"Успешно создано: {GREEN}{created_count}{RESET}")
     if failed_count > 0:
         print(f"Не удалось создать: {RED}{failed_count}{RESET}")
+    # print(get_current_year_from_parent_folder())
