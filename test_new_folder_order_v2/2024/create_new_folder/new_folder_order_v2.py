@@ -1,6 +1,7 @@
 from pathlib import Path
 from db_config import load_config
 import mysql.connector
+# pip install mysql-connector-python
 import shutil
 from colorama import init, Fore, Style
 
