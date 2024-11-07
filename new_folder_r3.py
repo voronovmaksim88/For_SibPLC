@@ -11,7 +11,7 @@ import shutil
 import datetime
 
 # указываем путь к родительской директории в которой хранятся заявки
-parent_directory = "D:/YandexDisk/Труд/0_В работе/2024"
+parent_directory = "."
 # parent_directory = "D:/YandexDisk/"
 
 # Получаем путь к папке, в которой находится этот скрипт
