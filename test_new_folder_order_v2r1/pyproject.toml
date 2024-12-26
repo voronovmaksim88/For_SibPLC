@@ -1,15 +1,12 @@
 [tool.poetry]
-name = "test_new_folder_order_v2r3"
+name = "test-new-folder-order-v2r1"
 version = "0.1.0"
 description = ""
-authors = ["Maksim <voronovmaksim88@gmail.com>"]
+authors = ["MaksimHome <voronovmaksim88@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-colorama = "^0.4.6"
-mysql-connector-python = "^9.1.0"
-python-dotenv = "^1.0.1"
+python = "^3.13"
 
 
 [build-system]
