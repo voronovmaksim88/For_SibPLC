@@ -64,32 +64,28 @@ def get_order_numbers_in_folder():
             # Получаем имя директории
             dir_name = item.name
 
-            # Проверяем, начинается ли имя с 3 цифр
-            if len(dir_name) >= 3 and dir_name[:3].isdigit():
+            # Проверяем, начинается ли имя с 3 цифр и извлекаем номер заказа
+            if len(dir_name) >= 11 and dir_name[:3].isdigit():
+                # Берем только номер заказа (первые 11 символов)
                 order_numbers.add(dir_name[:11])
 
     return order_numbers
 
 
-def create_maria_db_order_set():  # создаём множество заказов из MariaDB
+def create_maria_db_order_dict():  # создаём словарь заказов из MariaDB
     connection_mysql = None
     cursor_mysql = None
     try:
         connection_mysql = mysql.connector.connect(**config)
         cursor_mysql = connection_mysql.cursor()
-        cursor_mysql.execute("SHOW TABLES")
-        print("Названия всех таблиц в базе данных:")
-        tables = cursor_mysql.fetchall()
-        for (table_name,) in tables:
-            print(table_name)
         cursor_mysql.execute("Select serial, client FROM task")
         all_orders = cursor_mysql.fetchall()
-        order_set = set()
+        order_dict = {}  # Изменяем на словарь
         year = get_current_year_from_parent_folder()
         for order in all_orders:
             if order[0][7:11] == year:
-                order_set.add(order[0])
-        return order_set
+                order_dict[order[0]] = order[1]  # номер заказа : id клиента
+        return order_dict
 
     except mysql.connector.Error as err:
         print(f"{RED}Ошибка: {err}{RESET}")
@@ -178,38 +174,51 @@ if __name__ == "__main__":
     else:
         print(f"{RED}В текущей директории не найдены папки с номерами заказов.{RESET}")
 
-    maria_db_order_set = create_maria_db_order_set()
+    maria_db_order_dict = create_maria_db_order_dict()  # Теперь это словарь
     print('')
-    print("множество заказов в maria_db:")
-    print(maria_db_order_set)
+    print("словарь заказов в maria_db:")
+    print(maria_db_order_dict)
 
     maria_db_client_dict = create_maria_db_client_dict()
     print('')
     print("словарь клиентов в maria_db:")
     print(maria_db_client_dict)
 
-    if maria_db_order_set is None:
+    if maria_db_order_dict is None or maria_db_client_dict is None:
         print(f"{RED}Ошибка получения данных из базы данных. Создание папок невозможно.{RESET}")
         exit(1)
 
-    new_folder_names = maria_db_order_set - set(order_numbers_in_folder)
-    if not new_folder_names:
+    # Создаем множество существующих номеров заказов
+    existing_orders = set(order_numbers_in_folder)
+
+    # Создаем новые папки только для отсутствующих заказов
+    new_orders = []
+    for order_number, client_id in maria_db_order_dict.items():
+        if order_number not in existing_orders:
+            client_name = maria_db_client_dict.get(client_id, "Unknown")
+            # Заменяем недопустимые символы в имени клиента
+            client_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in client_name)
+            new_orders.append((order_number, client_name))
+
+    if not new_orders:
         print(f"{GREEN}Все необходимые папки уже существуют.{RESET}")
         exit(0)
 
     print('')
     print("новые папки будут созданы с именами:")
-    print(new_folder_names)
+    for order_number, client_name in new_orders:
+        print(f"{order_number}_{client_name}")
 
     # Счетчики для статистики
     created_count = 0
     failed_count = 0
 
     print(f"\nНачинаем создание папок...")
-    for new_folder in new_folder_names:
-        if create_order_folder(new_folder):
+    for order_number, client_name in new_orders:
+        folder_name = f"{order_number}_{client_name}"
+        if create_order_folder(folder_name):
             created_count += 1
-            print(f"{GREEN}Создана папка для заказа: {new_folder}{RESET}")
+            print(f"{GREEN}Создана папка для заказа: {folder_name}{RESET}")
         else:
             failed_count += 1
 
