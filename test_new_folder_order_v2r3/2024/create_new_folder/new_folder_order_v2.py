@@ -82,7 +82,7 @@ def create_maria_db_order_set():  # создаём множество заказ
         tables = cursor_mysql.fetchall()
         for (table_name,) in tables:
             print(table_name)
-        cursor_mysql.execute("Select serial FROM task")
+        cursor_mysql.execute("Select serial, client FROM task")
         all_orders = cursor_mysql.fetchall()
         order_set = set()
         year = get_current_year_from_parent_folder()
@@ -90,6 +90,31 @@ def create_maria_db_order_set():  # создаём множество заказ
             if order[0][7:11] == year:
                 order_set.add(order[0])
         return order_set
+
+    except mysql.connector.Error as err:
+        print(f"{RED}Ошибка: {err}{RESET}")
+        return None
+
+    finally:
+        if cursor_mysql is not None:
+            cursor_mysql.close()
+        if connection_mysql is not None and connection_mysql.is_connected():
+            connection_mysql.close()
+            print("Соединение с базой данных MariaDB закрыто")
+
+
+def create_maria_db_client_dict():  # создаём словарь клиентов из MariaDB
+    connection_mysql = None
+    cursor_mysql = None
+    try:
+        connection_mysql = mysql.connector.connect(**config)
+        cursor_mysql = connection_mysql.cursor()
+        cursor_mysql.execute("SELECT id, name FROM client")
+        all_clients = cursor_mysql.fetchall()
+        client_dict = {}
+        for client in all_clients:
+            client_dict[client[0]] = client[1]
+        return client_dict
 
     except mysql.connector.Error as err:
         print(f"{RED}Ошибка: {err}{RESET}")
@@ -157,6 +182,11 @@ if __name__ == "__main__":
     print('')
     print("множество заказов в maria_db:")
     print(maria_db_order_set)
+
+    maria_db_client_dict = create_maria_db_client_dict()
+    print('')
+    print("словарь клиентов в maria_db:")
+    print(maria_db_client_dict)
 
     if maria_db_order_set is None:
         print(f"{RED}Ошибка получения данных из базы данных. Создание папок невозможно.{RESET}")
