@@ -5,6 +5,7 @@ import mysql.connector
 # poetry add mysql-connector-python
 import shutil
 from colorama import init, Fore, Style
+import sys
 
 # Инициализация colorama для работы с цветами в разных терминалах
 init()
@@ -51,25 +52,35 @@ def get_current_year_from_parent_folder():
 
 
 def get_order_numbers_in_folder():
-    # Получаем текущую директорию, где находится скрипт
-    current_dir = Path(__file__).parent.parent  # Переход на уровень выше
+    try:
+        # Получаем текущую директорию
+        if getattr(sys, 'frozen', False):
+            # Если запущено как exe
+            current_dir = Path(sys.executable).parent.parent
+        else:
+            # Если запущено как скрипт
+            current_dir = Path(__file__).parent.parent
 
-    # Создаем множество для хранения номеров заказов
-    order_numbers = set()
+        # Создаем множество для хранения номеров заказов
+        order_numbers = set()
 
-    # Перебираем все элементы в текущей директории
-    for item in current_dir.iterdir():
-        # Проверяем, что это директория
-        if item.is_dir():
-            # Получаем имя директории
-            dir_name = item.name
+        # Перебираем все элементы в текущей директории
+        for item in current_dir.iterdir():
+            # Проверяем, что это директория
+            if item.is_dir():
+                # Получаем имя директории
+                dir_name = item.name
 
-            # Проверяем, начинается ли имя с 3 цифр и извлекаем номер заказа
-            if len(dir_name) >= 11 and dir_name[:3].isdigit():
-                # Берем только номер заказа (первые 11 символов)
-                order_numbers.add(dir_name[:11])
+                # Проверяем, начинается ли имя с 3 цифр и извлекаем номер заказа
+                if len(dir_name) >= 11 and dir_name[:3].isdigit():
+                    # Берем только номер заказа (первые 11 символов)
+                    order_numbers.add(dir_name[:11])
 
-    return order_numbers
+        return order_numbers
+
+    except Exception as e:
+        print(f"{RED}Ошибка при поиске номеров заказов: {e}{RESET}")
+        return set()
 
 
 def create_maria_db_order_dict():  # создаём словарь заказов из MariaDB
@@ -127,8 +138,14 @@ def create_maria_db_client_dict():  # создаём словарь клиент
 def create_order_folder(folder_name):
     """Создает папку для заказа и необходимые подпапки"""
     try:
-        # Получаем директорию на уровень выше
-        project_dir = Path(__file__).parent
+        # Получаем директорию с exe файлом или скриптом
+        if getattr(sys, 'frozen', False):
+            # Если это exe файл
+            project_dir = Path(sys.executable).parent
+        else:
+            # Если это обычный Python скрипт
+            project_dir = Path(__file__).parent
+
         parent_dir = project_dir.parent
 
         # Создаем основную папку заказа
@@ -168,64 +185,72 @@ def create_order_folder(folder_name):
 
 
 if __name__ == "__main__":
-    order_numbers_in_folder = get_order_numbers_in_folder()
-    if order_numbers_in_folder:
-        print(f"Найдены следующие номера заказов в папках: {sorted(order_numbers_in_folder)}")
-    else:
-        print(f"{RED}В текущей директории не найдены папки с номерами заказов.{RESET}")
-
-    maria_db_order_dict = create_maria_db_order_dict()  # Теперь это словарь
-    print('')
-    print("словарь заказов в maria_db:")
-    print(maria_db_order_dict)
-
-    maria_db_client_dict = create_maria_db_client_dict()
-    print('')
-    print("словарь клиентов в maria_db:")
-    print(maria_db_client_dict)
-
-    if maria_db_order_dict is None or maria_db_client_dict is None:
-        print(f"{RED}Ошибка получения данных из базы данных. Создание папок невозможно.{RESET}")
-        exit(1)
-
-    # Создаем множество существующих номеров заказов
-    existing_orders = set(order_numbers_in_folder)
-
-    # Создаем новые папки только для отсутствующих заказов
-    new_orders = []
-    for order_number, client_id in maria_db_order_dict.items():
-        if order_number not in existing_orders:
-            client_name = maria_db_client_dict.get(client_id, "Unknown")
-            # Заменяем недопустимые символы в имени клиента
-            client_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in client_name)
-            new_orders.append((order_number, client_name))
-
-    if not new_orders:
-        print(f"{GREEN}Все необходимые папки уже существуют.{RESET}")
-        exit(0)
-
-    print('')
-    print("новые папки будут созданы с именами:")
-    for order_number, client_name in new_orders:
-        print(f"{order_number}_{client_name}")
-
-    # Счетчики для статистики
-    created_count = 0
-    failed_count = 0
-
-    print(f"\nНачинаем создание папок...")
-    for order_number, client_name in new_orders:
-        folder_name = f"{order_number}_{client_name}"
-        if create_order_folder(folder_name):
-            created_count += 1
-            print(f"{GREEN}Создана папка для заказа: {folder_name}{RESET}")
+    try:
+        order_numbers_in_folder = get_order_numbers_in_folder()
+        if order_numbers_in_folder:
+            print(f"Найдены следующие номера заказов в папках: {sorted(order_numbers_in_folder)}")
         else:
-            failed_count += 1
+            print(f"{RED}В текущей директории не найдены папки с номерами заказов.{RESET}")
 
-    # Выводим итоговую статистику
-    print(f"\nСоздание папок завершено:")
-    print(f"Успешно создано: {GREEN}{created_count}{RESET}")
-    if failed_count > 0:
-        print(f"Не удалось создать: {RED}{failed_count}{RESET}")
+        maria_db_order_dict = create_maria_db_order_dict()  # Теперь это словарь
+        print('')
+        print("словарь заказов в maria_db:")
+        print(maria_db_order_dict)
 
-    answer = input("для выхода нажмите enter ")
+        maria_db_client_dict = create_maria_db_client_dict()
+        print('')
+        print("словарь клиентов в maria_db:")
+        print(maria_db_client_dict)
+
+        if maria_db_order_dict is None or maria_db_client_dict is None:
+            print(f"{RED}Ошибка получения данных из базы данных. Создание папок невозможно.{RESET}")
+            exit(1)
+
+        # Создаем множество существующих номеров заказов
+        existing_orders = set(order_numbers_in_folder)
+
+        # Создаем новые папки только для отсутствующих заказов
+        new_orders = []
+        for order_number, client_id in maria_db_order_dict.items():
+            if order_number not in existing_orders:
+                client_name = maria_db_client_dict.get(client_id, "Unknown")
+                # Заменяем недопустимые символы в имени клиента
+                client_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in client_name)
+                new_orders.append((order_number, client_name))
+
+        if not new_orders:
+            print(f"{GREEN}Все необходимые папки уже существуют.{RESET}")
+            answer = input("для выхода нажмите enter ")
+            exit(0)
+
+
+        print('')
+        print("новые папки будут созданы с именами:")
+        for order_number, client_name in new_orders:
+            print(f"{order_number}_{client_name}")
+
+        # Счетчики для статистики
+        created_count = 0
+        failed_count = 0
+
+        print(f"\nНачинаем создание папок...")
+        for order_number, client_name in new_orders:
+            folder_name = f"{order_number}_{client_name}"
+            if create_order_folder(folder_name):
+                created_count += 1
+                print(f"{GREEN}Создана папка для заказа: {folder_name}{RESET}")
+            else:
+                failed_count += 1
+
+        # Выводим итоговую статистику
+        print(f"\nСоздание папок завершено:")
+        print(f"Успешно создано: {GREEN}{created_count}{RESET}")
+        if failed_count > 0:
+            print(f"Не удалось создать: {RED}{failed_count}{RESET}")
+
+        answer = input("для выхода нажмите enter ")
+
+    except Exception as e:
+        print(f"\n{RED}Произошла ошибка: {e}{RESET}")
+    finally:
+        input("\nНажмите Enter для завершения программы...")
