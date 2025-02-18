@@ -227,3 +227,5 @@ if __name__ == "__main__":
     print(f"Успешно создано: {GREEN}{created_count}{RESET}")
     if failed_count > 0:
         print(f"Не удалось создать: {RED}{failed_count}{RESET}")
+
+    answer = input("для выхода нажмите enter ")
